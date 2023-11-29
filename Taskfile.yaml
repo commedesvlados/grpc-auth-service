@@ -1,0 +1,11 @@
+# See: https://taskfile.dev/api/
+
+version: "3"
+
+tasks:
+  migrate:
+    aliases:
+      - migrate storage
+    desc: "Migrate storage (db)"
+    cmds:
+      - go run cmd/migrator/main.go --storage-path=./storage/storage.db --migrations-path=./migrations
