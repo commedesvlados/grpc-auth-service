@@ -17,7 +17,7 @@ type Storage struct {
 	db *sql.DB
 }
 
-func NewStorage(storagePath string) (*Storage, error) {
+func New(storagePath string) (*Storage, error) {
 	const fn = "storage.sqlite.NewStorage"
 
 	db, err := sql.Open("sqlite3", storagePath)
@@ -57,8 +57,59 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 func (s *Storage) User(ctx context.Context, email string) (models.User, error) {
 	const fn = "storage.sqlite.User"
 
-	stmt, err := s.db.Prepare("SELECT user FROM users WHERE email=?")
+	stmt, err := s.db.Prepare("SELECT id, email, pass_hash FROM users WHERE email = ?")
 	if err != nil {
-		return models.User{}, err
+		return models.User{}, fmt.Errorf("%s: %w", fn, err)
 	}
+
+	var res models.User
+	if err = stmt.QueryRowContext(ctx, email).Scan(&res.ID, &res.Email, &res.PassHash); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.User{}, storage.ErrUserNotFound
+		}
+
+		return models.User{}, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	return res, nil
+}
+
+func (s *Storage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
+	const fn = "storage.sqlite.IsAdmin"
+
+	stmt, err := s.db.Prepare("SELECT is_admin FROM users WHERE id = ?")
+	if err != nil {
+		return false, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	var isAdmin bool
+	if err = stmt.QueryRowContext(ctx, userID).Scan(&isAdmin); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, fmt.Errorf("%s: %w", fn, storage.ErrUserNotFound)
+		}
+
+		return false, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	return isAdmin, nil
+}
+
+func (s *Storage) App(ctx context.Context, appID int32) (models.App, error) {
+	const fn = "storage.sqlite.App"
+
+	stmt, err := s.db.Prepare("SELECT id, name, secret FROM apps WHERE id = ?")
+	if err != nil {
+		return models.App{}, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	var res models.App
+	if err = stmt.QueryRowContext(ctx, appID).Scan(&res.ID, &res.Name, &res.Secret); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.App{}, storage.ErrAppNotFound
+		}
+
+		return models.App{}, err
+	}
+
+	return res, nil
 }

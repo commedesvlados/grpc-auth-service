@@ -33,11 +33,12 @@ type UserProvider interface {
 }
 
 type AppProvider interface {
-	App(ctx context.Context, appID int) (models.App, error)
+	App(ctx context.Context, appID int32) (models.App, error)
 }
 
 var (
 	ErrUserExists         = errors.New("user already exists")
+	ErrUserNotFound       = errors.New("user not found")
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrInvalidAppID       = errors.New("invalid app id")
 )
@@ -58,7 +59,7 @@ func New(
 	}
 }
 
-func (a *Auth) RegisterUser(ctx context.Context, email, password string) (int64, error) {
+func (a *Auth) Register(ctx context.Context, email, password string) (int64, error) {
 	const fn = "auth.RegisterUser"
 
 	log := a.log.With(
@@ -89,7 +90,7 @@ func (a *Auth) RegisterUser(ctx context.Context, email, password string) (int64,
 	return id, nil
 }
 
-func (a *Auth) LoginUser(ctx context.Context, email, password string, appID int) (string, error) {
+func (a *Auth) Login(ctx context.Context, email, password string, appID int32) (string, error) {
 	const fn = "auth.LoginUser"
 
 	log := a.log.With(

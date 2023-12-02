@@ -37,14 +37,13 @@ type Envs struct {
 var E *Envs
 var onceE sync.Once
 
-func ReadEnv(env string) {
+func ReadEnv(envPath string) {
 	onceE.Do(func() {
-		envPath := ".env." + env
 		if err := godotenv.Load(envPath); err != nil {
 			log.Fatalf("can't loading env variables, err: %s\n", err.Error())
 		}
 
-		log.Printf("[Config] Read %s environment variables\n", env)
+		log.Printf("[Config] Read environment variables, path: %s\n", envPath)
 		E = &Envs{}
 		if err := cleanenv.ReadEnv(E); err != nil {
 			help, _ := cleanenv.GetDescription(E, nil)
@@ -61,15 +60,13 @@ type Config struct {
 var C *Config
 var onceC sync.Once
 
-func ReadConfig(env string) {
+func ReadConfig(configPath string) {
 	onceC.Do(func() {
-		configPath := fmt.Sprintf("config/config.%s.yaml", env)
-
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
 			log.Fatalf("config file does not exists: %s, err: %s\n", configPath, err.Error())
 		}
 
-		log.Printf("[Config] Read %s configuration variables\n", env)
+		log.Printf("[Config] Read configuration variables, path: %s\n", configPath)
 		C = &Config{}
 		if err := cleanenv.ReadConfig(configPath, C); err != nil {
 			help, _ := cleanenv.GetDescription(E, nil)
@@ -84,6 +81,13 @@ func MustLoadVariables() {
 	flag.StringVar(&fenv, "env", "production/ development / local", "project environment")
 	flag.Parse()
 
-	ReadEnv(fenv)
-	ReadConfig(fenv)
+	envPath := ".env." + fenv
+	configPath := fmt.Sprintf("config/config.%s.yaml", fenv)
+
+	MustLoadVariablesByPath(envPath, configPath)
+}
+
+func MustLoadVariablesByPath(envPath, configPath string) {
+	ReadEnv(envPath)
+	ReadConfig(configPath)
 }
